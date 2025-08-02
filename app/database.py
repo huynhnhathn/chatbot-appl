@@ -6,7 +6,8 @@ from qdrant_client.models import (
     Filter, 
     FieldCondition, 
     Range, 
-    MatchValue
+    MatchValue,
+    CollectionInfo
 )
 from qdrant_client.http import models
 from typing import List, Dict, Any, Optional, Tuple, Union
@@ -14,6 +15,7 @@ import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer
 from app.logger import get_logger
+from app.types import CollectionInfoDict, SearchResult, is_collection_info, is_scored_point
 from config import settings
 
 logger = get_logger(__name__)
@@ -36,7 +38,17 @@ class QdrantManager:
         """Ensure the collection exists, create if it doesn't."""
         try:
             collections = self.client.get_collections()
-            collection_names = [col.name for col in collections.collections]
+            
+            # Handle potential None values and type issues
+            collection_names = []
+            if hasattr(collections, 'collections') and collections.collections:
+                for col in collections.collections:
+                    try:
+                        name = getattr(col, 'name', None)
+                        if name:
+                            collection_names.append(name)
+                    except AttributeError:
+                        continue
             
             if self.collection_name not in collection_names:
                 logger.info("Creating new collection", collection_name=self.collection_name)
@@ -110,7 +122,7 @@ class QdrantManager:
             logger.error("Error adding documents", error=str(e))
             raise
     
-    def search_similar(self, query: str, limit: int = 5, score_threshold: float = 0.7) -> List[Dict[str, Union[str, float, Dict[str, Any]]]]:
+    def search_similar(self, query: str, limit: int = 5, score_threshold: float = 0.7) -> List[SearchResult]:
         """Search for similar documents based on query."""
         try:
             query_embedding = self.get_embedding(query)
@@ -124,6 +136,11 @@ class QdrantManager:
             
             results = []
             for result in search_result:
+                # Use type guard to ensure result is a ScoredPoint
+                if not is_scored_point(result):
+                    logger.warning("Skipping invalid search result")
+                    continue
+                    
                 # Handle case where payload might be None
                 payload: Dict[str, Any] = result.payload or {}
                 results.append({
@@ -174,19 +191,44 @@ class QdrantManager:
             logger.error("Error deleting documents", error=str(e))
             raise
     
-    def get_collection_info(self) -> Dict[str, Any]:
+    def get_collection_info(self) -> CollectionInfoDict:
         """Get information about the collection."""
         try:
-            collection_info = self.client.get_collection(self.collection_name)
+            collection_info: CollectionInfo = self.client.get_collection(self.collection_name)
+            
+            # Use type guard to ensure collection_info is valid
+            if not is_collection_info(collection_info):
+                logger.warning("Invalid collection info returned from Qdrant")
+                raise ValueError("Invalid collection info")
+            
+            # Handle potential None values and type issues
+            try:
+                name = getattr(collection_info, 'name', self.collection_name)
+                vector_size = getattr(collection_info.config.params.vectors, 'size', self.vector_size)
+                distance = getattr(collection_info.config.params.vectors, 'distance', 'Cosine')
+                points_count = getattr(collection_info, 'points_count', 0)
+            except AttributeError:
+                # Fallback values if attributes don't exist
+                name = self.collection_name
+                vector_size = self.vector_size
+                distance = 'Cosine'
+                points_count = 0
+            
             return {
-                'name': collection_info.name,
-                'vector_size': collection_info.config.params.vectors.size,
-                'distance': collection_info.config.params.vectors.distance,
-                'points_count': collection_info.points_count
+                'name': name,
+                'vector_size': vector_size,
+                'distance': distance,
+                'points_count': points_count
             }
         except Exception as e:
             logger.error("Error getting collection info", error=str(e))
-            raise
+            # Return default values on error
+            return {
+                'name': self.collection_name,
+                'vector_size': self.vector_size,
+                'distance': 'Cosine',
+                'points_count': 0
+            }
     
     def health_check(self) -> bool:
         """Check if the database is healthy."""

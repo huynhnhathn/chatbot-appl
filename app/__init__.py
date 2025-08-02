@@ -7,9 +7,14 @@ if TYPE_CHECKING:
     from .chatbot import ChatbotEngine
     from .models import *
     from .logger import get_logger
+    from .types import *
 
 __all__ = [
     'QdrantManager',
     'ChatbotEngine',
     'get_logger',
+    'CollectionInfoDict',
+    'SearchResult',
+    'EmbeddingVector',
+    'DocumentPayload',
 ]

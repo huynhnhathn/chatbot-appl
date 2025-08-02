@@ -88,6 +88,9 @@ module = [
     "torch.*",
     "qdrant_client.*",
     "prometheus_client.*",
+    "langchain.*",
+    "langchain_openai.*",
+    "langchain_community.*",
 ]
 ignore_missing_imports = true
 
