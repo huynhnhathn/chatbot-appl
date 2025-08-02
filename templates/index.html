@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: calc(100vh - 200px);
+        }
+        .message-bubble {
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .typing-indicator {
+            display: none;
+        }
+        .typing-indicator.show {
+            display: block;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .scroll-smooth {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-robot text-blue-600 text-2xl mr-3"></i>
+                        <h1 class="text-xl font-semibold text-gray-900">{{ app_name }}</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button id="clearChat" class="text-gray-500 hover:text-gray-700 transition-colors">
+                            <i class="fas fa-trash mr-1"></i>Clear Chat
+                        </button>
+                        <button id="addKnowledge" class="text-gray-500 hover:text-gray-700 transition-colors">
+                            <i class="fas fa-plus mr-1"></i>Add Knowledge
+                        </button>
+                        <div id="statusIndicator" class="flex items-center">
+                            <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                            <span class="text-sm text-gray-600">Connected</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- Chat Interface -->
+                <div class="lg:col-span-3">
+                    <div class="bg-white rounded-lg shadow-sm border">
+                        <!-- Chat Messages -->
+                        <div id="chatMessages" class="chat-container overflow-y-auto p-4 space-y-4 scroll-smooth">
+                            <div class="text-center text-gray-500 py-8">
+                                <i class="fas fa-comments text-4xl mb-4"></i>
+                                <p>Start a conversation with the AI assistant</p>
+                            </div>
+                        </div>
+
+                        <!-- Typing Indicator -->
+                        <div id="typingIndicator" class="typing-indicator px-4 pb-4">
+                            <div class="flex items-center space-x-2">
+                                <div class="flex space-x-1">
+                                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                                </div>
+                                <span class="text-sm text-gray-500">AI is thinking...</span>
+                            </div>
+                        </div>
+
+                        <!-- Input Area -->
+                        <div class="border-t p-4">
+                            <form id="chatForm" class="flex space-x-3">
+                                <div class="flex-1">
+                                    <textarea 
+                                        id="messageInput" 
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                        placeholder="Type your message here..."
+                                        rows="2"
+                                        maxlength="2000"
+                                    ></textarea>
+                                </div>
+                                <button 
+                                    type="submit" 
+                                    id="sendButton"
+                                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="lg:col-span-1">
+                    <div class="space-y-6">
+                        <!-- Knowledge Base -->
+                        <div class="bg-white rounded-lg shadow-sm border p-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-database mr-2"></i>Knowledge Base
+                            </h3>
+                            <div class="space-y-3">
+                                <button id="searchKnowledge" class="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                    <i class="fas fa-search mr-2"></i>Search Knowledge
+                                </button>
+                                <button id="viewStats" class="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                    <i class="fas fa-chart-bar mr-2"></i>View Statistics
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- System Info -->
+                        <div class="bg-white rounded-lg shadow-sm border p-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-info-circle mr-2"></i>System Info
+                            </h3>
+                            <div id="systemInfo" class="space-y-2 text-sm text-gray-600">
+                                <div>Loading...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add Knowledge Modal -->
+    <div id="addKnowledgeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg max-w-md w-full p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Add to Knowledge Base</h3>
+                <form id="addKnowledgeForm">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Content</label>
+                        <textarea 
+                            id="knowledgeContent" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            rows="4"
+                            placeholder="Enter content to add to knowledge base..."
+                            required
+                        ></textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Source</label>
+                        <input 
+                            type="text" 
+                            id="knowledgeSource" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="e.g., documentation, user input"
+                            value="user_input"
+                        >
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" id="cancelAddKnowledge" class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Add
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Modal -->
+    <div id="searchModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Search Knowledge Base</h3>
+                <form id="searchForm">
+                    <div class="mb-4">
+                        <input 
+                            type="text" 
+                            id="searchQuery" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter search query..."
+                            required
+                        >
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" id="cancelSearch" class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Search
+                        </button>
+                    </div>
+                </form>
+                <div id="searchResults" class="mt-6 max-h-96 overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let sessionId = generateSessionId();
+        let isTyping = false;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSystemInfo();
+            setupEventListeners();
+        });
+
+        function generateSessionId() {
+            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function setupEventListeners() {
+            // Chat form
+            document.getElementById('chatForm').addEventListener('submit', handleChatSubmit);
+            
+            // Message input
+            document.getElementById('messageInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleChatSubmit(e);
+                }
+            });
+
+            // Clear chat
+            document.getElementById('clearChat').addEventListener('click', clearChat);
+
+            // Add knowledge
+            document.getElementById('addKnowledge').addEventListener('click', showAddKnowledgeModal);
+            document.getElementById('cancelAddKnowledge').addEventListener('click', hideAddKnowledgeModal);
+            document.getElementById('addKnowledgeForm').addEventListener('submit', handleAddKnowledge);
+
+            // Search knowledge
+            document.getElementById('searchKnowledge').addEventListener('click', showSearchModal);
+            document.getElementById('cancelSearch').addEventListener('click', hideSearchModal);
+            document.getElementById('searchForm').addEventListener('submit', handleSearch);
+
+            // View stats
+            document.getElementById('viewStats').addEventListener('click', loadSystemInfo);
+        }
+
+        async function handleChatSubmit(e) {
+            e.preventDefault();
+            
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message || isTyping) return;
+            
+            // Add user message
+            addMessage('user', message);
+            messageInput.value = '';
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        session_id: sessionId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addMessage('assistant', data.response, {
+                        context_used: data.context_used,
+                        response_time: data.response_time,
+                        tokens_used: data.tokens_used,
+                        cost: data.cost
+                    });
+                } else {
+                    addMessage('assistant', 'Sorry, I encountered an error. Please try again.', { error: true });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('assistant', 'Sorry, I encountered an error. Please try again.', { error: true });
+            } finally {
+                hideTypingIndicator();
+            }
+        }
+
+        function addMessage(role, content, metadata = {}) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `fade-in ${role === 'user' ? 'flex justify-end' : 'flex justify-start'}`;
+            
+            const bubbleClass = role === 'user' 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-gray-100 text-gray-900';
+            
+            let metadataHtml = '';
+            if (metadata.context_used !== undefined) {
+                metadataHtml += `<div class="text-xs opacity-75 mt-1">
+                    <i class="fas fa-database mr-1"></i>${metadata.context_used ? 'Used knowledge base' : 'No relevant context'}
+                </div>`;
+            }
+            if (metadata.response_time) {
+                metadataHtml += `<div class="text-xs opacity-75">Response time: ${metadata.response_time}s</div>`;
+            }
+            if (metadata.tokens_used) {
+                metadataHtml += `<div class="text-xs opacity-75">Tokens: ${metadata.tokens_used}</div>`;
+            }
+            if (metadata.cost) {
+                metadataHtml += `<div class="text-xs opacity-75">Cost: $${metadata.cost.toFixed(4)}</div>`;
+            }
+            
+            messageDiv.innerHTML = `
+                <div class="message-bubble ${bubbleClass} px-4 py-2 rounded-lg">
+                    <div>${content}</div>
+                    ${metadataHtml}
+                </div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            isTyping = true;
+            document.getElementById('typingIndicator').classList.add('show');
+            document.getElementById('sendButton').disabled = true;
+        }
+
+        function hideTypingIndicator() {
+            isTyping = false;
+            document.getElementById('typingIndicator').classList.remove('show');
+            document.getElementById('sendButton').disabled = false;
+        }
+
+        async function clearChat() {
+            if (confirm('Are you sure you want to clear the chat history?')) {
+                try {
+                    await fetch('/api/chat/clear', { method: 'POST' });
+                    document.getElementById('chatMessages').innerHTML = `
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-comments text-4xl mb-4"></i>
+                            <p>Start a conversation with the AI assistant</p>
+                        </div>
+                    `;
+                    sessionId = generateSessionId();
+                } catch (error) {
+                    console.error('Error clearing chat:', error);
+                }
+            }
+        }
+
+        function showAddKnowledgeModal() {
+            document.getElementById('addKnowledgeModal').classList.remove('hidden');
+        }
+
+        function hideAddKnowledgeModal() {
+            document.getElementById('addKnowledgeModal').classList.add('hidden');
+            document.getElementById('addKnowledgeForm').reset();
+        }
+
+        async function handleAddKnowledge(e) {
+            e.preventDefault();
+            
+            const content = document.getElementById('knowledgeContent').value.trim();
+            const source = document.getElementById('knowledgeSource').value.trim() || 'user_input';
+            
+            if (!content) return;
+            
+            try {
+                const response = await fetch('/api/knowledge-base', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: content,
+                        source: source
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Content added to knowledge base successfully!');
+                    hideAddKnowledgeModal();
+                } else {
+                    alert('Error adding content: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error adding content to knowledge base');
+            }
+        }
+
+        function showSearchModal() {
+            document.getElementById('searchModal').classList.remove('hidden');
+        }
+
+        function hideSearchModal() {
+            document.getElementById('searchModal').classList.add('hidden');
+            document.getElementById('searchForm').reset();
+            document.getElementById('searchResults').innerHTML = '';
+        }
+
+        async function handleSearch(e) {
+            e.preventDefault();
+            
+            const query = document.getElementById('searchQuery').value.trim();
+            if (!query) return;
+            
+            const resultsDiv = document.getElementById('searchResults');
+            resultsDiv.innerHTML = '<div class="text-center py-4">Searching...</div>';
+            
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        limit: 10
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displaySearchResults(data.results);
+                } else {
+                    resultsDiv.innerHTML = '<div class="text-red-500">Error searching knowledge base</div>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultsDiv.innerHTML = '<div class="text-red-500">Error searching knowledge base</div>';
+            }
+        }
+
+        function displaySearchResults(results) {
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (results.length === 0) {
+                resultsDiv.innerHTML = '<div class="text-center py-4 text-gray-500">No results found</div>';
+                return;
+            }
+            
+            const resultsHtml = results.map(result => `
+                <div class="border-b border-gray-200 py-3">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="text-sm text-gray-500">Score: ${(result.score * 100).toFixed(1)}%</div>
+                        <div class="text-xs text-gray-400">${result.source}</div>
+                    </div>
+                    <div class="text-sm text-gray-900">${result.content}</div>
+                </div>
+            `).join('');
+            
+            resultsDiv.innerHTML = resultsHtml;
+        }
+
+        async function loadSystemInfo() {
+            try {
+                const response = await fetch('/api/info');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('systemInfo').innerHTML = `
+                        <div><strong>Version:</strong> ${data.version}</div>
+                        <div><strong>Model:</strong> ${data.model}</div>
+                        <div><strong>Vector Size:</strong> ${data.vector_size}</div>
+                        <div><strong>Documents:</strong> ${data.database.points_count}</div>
+                        <div><strong>Memory:</strong> ${data.memory.message_count} messages</div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading system info:', error);
+                document.getElementById('systemInfo').innerHTML = '<div class="text-red-500">Error loading system info</div>';
+            }
+        }
+    </script>
+</body>
+</html>
