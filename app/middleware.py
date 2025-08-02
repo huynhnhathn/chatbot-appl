@@ -154,7 +154,36 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self'"
+        
+        # Content Security Policy - more permissive for development
+        from config import settings
+        
+        # Only add CSP if enabled
+        if settings.enable_csp:
+            if settings.debug:
+                # More permissive CSP for development
+                csp_policy = (
+                    "default-src 'self'; "
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+                    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+                    "style-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+                    "font-src 'self' https://cdnjs.cloudflare.com; "
+                    "img-src 'self' data:; "
+                    "connect-src 'self';"
+                )
+            else:
+                # Stricter CSP for production
+                csp_policy = (
+                    "default-src 'self'; "
+                    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+                    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+                    "style-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+                    "font-src 'self' https://cdnjs.cloudflare.com; "
+                    "img-src 'self' data:; "
+                    "connect-src 'self';"
+                )
+            
+            response.headers["Content-Security-Policy"] = csp_policy
         
         return response
     

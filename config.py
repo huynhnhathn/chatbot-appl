@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     enable_metrics: bool = True
     prometheus_port: int = 9090
     
+    # Security
+    enable_csp: bool = True
+    
     # Rate Limiting
     rate_limit_per_minute: int = 60
     rate_limit_per_hour: int = 1000
