@@ -117,7 +117,7 @@ async def chat(request: ChatRequest):
             response_time=result["response_time"],
             tokens_used=result["tokens_used"],
             cost=result["cost"],
-            error=result.get("error"),
+            error=result.get("error") if result else None,
             session_id=request.session_id
         )
         

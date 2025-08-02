@@ -9,7 +9,7 @@ from qdrant_client.models import (
     MatchValue
 )
 from qdrant_client.http import models
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Union
 import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer
@@ -83,6 +83,10 @@ class QdrantManager:
         try:
             points = []
             for doc in documents:
+                if not doc or 'content' not in doc:
+                    logger.warning("Skipping document with missing content")
+                    continue
+                    
                 embedding = self.get_embedding(doc['content'])
                 point = PointStruct(
                     id=doc.get('id', hash(doc['content'])),
@@ -106,7 +110,7 @@ class QdrantManager:
             logger.error("Error adding documents", error=str(e))
             raise
     
-    def search_similar(self, query: str, limit: int = 5, score_threshold: float = 0.7) -> List[Dict[str, Any]]:
+    def search_similar(self, query: str, limit: int = 5, score_threshold: float = 0.7) -> List[Dict[str, Union[str, float, Dict[str, Any]]]]:
         """Search for similar documents based on query."""
         try:
             query_embedding = self.get_embedding(query)
@@ -120,13 +124,15 @@ class QdrantManager:
             
             results = []
             for result in search_result:
+                # Handle case where payload might be None
+                payload: Dict[str, Any] = result.payload or {}
                 results.append({
                     'id': result.id,
                     'score': result.score,
-                    'content': result.payload.get('content', ''),
-                    'metadata': result.payload.get('metadata', {}),
-                    'source': result.payload.get('source', ''),
-                    'timestamp': result.payload.get('timestamp', '')
+                    'content': payload.get('content', ''),
+                    'metadata': payload.get('metadata', {}),
+                    'source': payload.get('source', ''),
+                    'timestamp': payload.get('timestamp', '')
                 })
             
             logger.info("Search completed", query_length=len(query), results_count=len(results))
