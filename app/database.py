@@ -30,8 +30,16 @@ class QdrantManager:
             port=settings.qdrant_port
         )
         self.collection_name = settings.qdrant_collection_name
-        self.vector_size = settings.qdrant_vector_size
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        
+        # Get the actual vector size from the model
+        self.vector_size = self.embedding_model.get_sentence_embedding_dimension()
+        
+        # Override with config if specified and different
+        if settings.qdrant_vector_size != 384:  # Default for all-MiniLM-L6-v2
+            logger.warning(f"Config vector size ({settings.qdrant_vector_size}) doesn't match model size ({self.vector_size})")
+            self.vector_size = settings.qdrant_vector_size
+        
         self._ensure_collection_exists()
     
     def _ensure_collection_exists(self) -> None:
@@ -51,7 +59,7 @@ class QdrantManager:
                         continue
             
             if self.collection_name not in collection_names:
-                logger.info("Creating new collection", collection_name=self.collection_name)
+                logger.info("Creating new collection", collection_name=self.collection_name, vector_size=self.vector_size)
                 self.client.create_collection(
                     collection_name=self.collection_name,
                     vectors_config=VectorParams(
@@ -61,7 +69,27 @@ class QdrantManager:
                 )
                 logger.info("Collection created successfully")
             else:
-                logger.info("Collection already exists", collection_name=self.collection_name)
+                # Check if existing collection has correct vector size
+                try:
+                    collection_info = self.client.get_collection(self.collection_name)
+                    existing_size = collection_info.config.params.vectors.size
+                    if existing_size != self.vector_size:
+                        logger.warning(f"Collection vector size mismatch: expected {self.vector_size}, got {existing_size}")
+                        logger.info("Recreating collection with correct vector size")
+                        self.client.delete_collection(self.collection_name)
+                        self.client.create_collection(
+                            collection_name=self.collection_name,
+                            vectors_config=VectorParams(
+                                size=self.vector_size,
+                                distance=Distance.COSINE
+                            )
+                        )
+                        logger.info("Collection recreated successfully")
+                    else:
+                        logger.info("Collection already exists with correct vector size", collection_name=self.collection_name)
+                except Exception as e:
+                    logger.warning(f"Could not verify collection vector size: {e}")
+                    logger.info("Collection already exists", collection_name=self.collection_name)
                 
         except Exception as e:
             logger.error("Error ensuring collection exists", error=str(e))
@@ -238,6 +266,17 @@ class QdrantManager:
         except Exception as e:
             logger.error("Database health check failed", error=str(e))
             return False
+    
+    def clear_collection(self) -> None:
+        """Clear all documents from the collection."""
+        try:
+            self.client.delete_collection(self.collection_name)
+            logger.info("Collection deleted successfully")
+            # Recreate the collection
+            self._ensure_collection_exists()
+        except Exception as e:
+            logger.error("Error clearing collection", error=str(e))
+            raise
 
 
 # Global database manager instance

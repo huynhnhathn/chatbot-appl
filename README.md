@@ -191,7 +191,7 @@ curl -X POST "http://localhost:8000/api/search" \
 | `QDRANT_HOST` | Qdrant host | `localhost` |
 | `QDRANT_PORT` | Qdrant port | `6333` |
 | `QDRANT_COLLECTION_NAME` | Vector collection name | `chatbot_knowledge` |
-| `QDRANT_VECTOR_SIZE` | Vector dimensions | `1536` |
+| `QDRANT_VECTOR_SIZE` | Vector dimensions | `384` |
 | `DEBUG` | Debug mode | `False` |
 | `LOG_LEVEL` | Logging level | `INFO` |
 | `HOST` | Server host | `0.0.0.0` |
@@ -300,15 +300,24 @@ mypy app/
    - Ensure Qdrant is running: `docker-compose ps qdrant`
    - Check Qdrant logs: `docker-compose logs qdrant`
 
-2. **OpenAI API Error**
+2. **Vector Dimension Error**
+   - **Error**: `"Vector dimension error: expected dim: 1536, got 384"`
+   - **Solution**: The application automatically detects and uses the correct vector size (384 for all-MiniLM-L6-v2)
+   - **Fix**: Update your `.env` file to use `QDRANT_VECTOR_SIZE=384`
+   - **Alternative**: Clear the collection to recreate it with correct dimensions:
+     ```bash
+     curl -X DELETE http://localhost:8000/api/knowledge-base
+     ```
+
+3. **OpenAI API Error**
    - Verify API key in `.env` file
    - Check API key permissions and quota
 
-3. **Memory Issues**
+4. **Memory Issues**
    - Increase Docker memory limits
    - Monitor system resources
 
-4. **Rate Limiting**
+5. **Rate Limiting**
    - Adjust rate limits in configuration
    - Check client usage patterns
 

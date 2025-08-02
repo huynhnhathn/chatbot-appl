@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     qdrant_host: str = "localhost"
     qdrant_port: int = 6333
     qdrant_collection_name: str = "chatbot_knowledge"
-    qdrant_vector_size: int = 1536
+    qdrant_vector_size: int = 384  # all-MiniLM-L6-v2 produces 384-dimensional embeddings
     
     # Application Configuration
     app_name: str = "Production Chatbot"
