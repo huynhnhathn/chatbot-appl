@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import uuid
 import time
+import os
 from typing import Dict, Any, Optional
 
 from app.models import (
@@ -35,7 +36,25 @@ setup_middleware(app)
 health_checker = HealthChecker(db_manager, chatbot_engine)
 
 # Templates for web interface
-templates = Jinja2Templates(directory="templates")
+def get_templates_directory():
+    """Get the templates directory path."""
+    # Try multiple possible paths
+    possible_paths = [
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates"),
+        os.path.join(os.getcwd(), "templates"),
+        "templates"
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            logger.info(f"Using templates directory: {path}")
+            return path
+    
+    # Fallback to current directory
+    logger.warning(f"Templates directory not found in any of: {possible_paths}")
+    return "templates"
+
+templates = Jinja2Templates(directory=get_templates_directory())
 
 
 @app.on_event("startup")
