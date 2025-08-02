@@ -11,6 +11,7 @@ from qdrant_client.models import (
 from qdrant_client.http import models
 from typing import List, Dict, Any, Optional, Tuple
 import numpy as np
+import torch
 from sentence_transformers import SentenceTransformer
 from app.logger import get_logger
 from config import settings
@@ -58,7 +59,21 @@ class QdrantManager:
         """Generate embedding for given text."""
         try:
             embedding = self.embedding_model.encode(text)
+            
+            # Convert to numpy array first, then to list
+            if isinstance(embedding, torch.Tensor):
+                embedding = embedding.detach().cpu().numpy()
+            elif isinstance(embedding, list) and len(embedding) > 0 and isinstance(embedding[0], torch.Tensor):
+                # Handle list of tensors
+                embedding = torch.stack(embedding).detach().cpu().numpy()
+            
+            # Ensure it's a numpy array
+            if not isinstance(embedding, np.ndarray):
+                embedding = np.array(embedding)
+            
+            # Convert to list
             return embedding.tolist()
+                
         except Exception as e:
             logger.error("Error generating embedding", error=str(e), text=text[:100])
             raise
