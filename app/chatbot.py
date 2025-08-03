@@ -100,16 +100,20 @@ Assistant:"""
             logger.error("Error formatting chat history", error=str(e))
             return "Error formatting conversation history."
     
-    async def generate_response(self, user_input: str, user_id: Optional[str] = None) -> Dict[str, Any]:
+    def generate_response(self, user_input: str, user_id: Optional[str] = None) -> Dict[str, Any]:
         """Generate a response to user input."""
         start_time = time.time()
         
         try:
             # Get relevant context
+            logger.debug("Getting context for user input", user_input=user_input[:100])
             context = self._get_context(user_input)
+            logger.debug("Context retrieved", context_length=len(context))
             
             # Format chat history
+            logger.debug("Formatting chat history")
             chat_history = self._format_chat_history()
+            logger.debug("Chat history formatted", history_length=len(chat_history))
             
             # Prepare input for the chain
             chain_input = {
@@ -117,10 +121,13 @@ Assistant:"""
                 "chat_history": chat_history,
                 "user_input": user_input
             }
+            logger.debug("Chain input prepared", input_keys=list(chain_input.keys()))
             
             # Generate response with OpenAI callback for monitoring
+            logger.debug("Invoking LLM chain")
             with get_openai_callback() as cb:
-                response = await self.chain.ainvoke(chain_input)
+                # Use invoke instead of ainvoke for LLMChain
+                response = self.chain.invoke(chain_input)
                 
                 # Log usage metrics
                 logger.info(
@@ -162,9 +169,20 @@ Assistant:"""
             
         except Exception as e:
             response_time = time.time() - start_time
+            import traceback
+            
+            # Get detailed error information
+            error_details = {
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "traceback": traceback.format_exc()
+            }
+            
             logger.error(
                 "Error generating response",
-                error=str(e),
+                error_type=error_details["error_type"],
+                error_message=error_details["error_message"],
+                traceback=error_details["traceback"],
                 response_time=response_time,
                 user_id=user_id
             )
@@ -172,6 +190,7 @@ Assistant:"""
             return {
                 "response": "I apologize, but I encountered an error while processing your request. Please try again.",
                 "error": str(e),
+                "error_type": type(e).__name__,
                 "response_time": round(response_time, 3),
                 "context_used": False,
                 "tokens_used": 0,

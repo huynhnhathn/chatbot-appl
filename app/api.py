@@ -98,7 +98,7 @@ async def chat(request: ChatRequest):
         metrics_collector.record_chat_request()
         
         # Generate response
-        result = await chatbot_engine.generate_response(
+        result = chatbot_engine.generate_response(
             user_input=request.message,
             user_id=request.user_id
         )
