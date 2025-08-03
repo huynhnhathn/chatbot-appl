@@ -1,7 +1,7 @@
 from langchain_openai import ChatOpenAI
 from langchain.schema import HumanMessage, AIMessage, SystemMessage
 from langchain.memory import ConversationBufferWindowMemory
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain
 from langchain.callbacks import get_openai_callback
 from typing import List, Dict, Any, Optional
@@ -50,16 +50,11 @@ Current conversation:
 User: {user_input}
 Assistant:"""
 
-        self.prompt = ChatPromptTemplate.from_messages([
-            ("system", self.system_prompt),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{user_input}")
-        ])
+        self.prompt = ChatPromptTemplate.from_template(self.system_prompt)
         
         self.chain = LLMChain(
             llm=self.llm,
             prompt=self.prompt,
-            memory=self.memory,
             verbose=settings.debug
         )
     
@@ -139,9 +134,16 @@ Assistant:"""
             
             response_time = time.time() - start_time
             
+            # Get the response text
+            response_text = response["text"].strip()
+            
+            # Manually add messages to memory
+            self.memory.chat_memory.add_user_message(user_input)
+            self.memory.chat_memory.add_ai_message(response_text)
+            
             # Prepare response
             result = {
-                "response": response["text"].strip(),
+                "response": response_text,
                 "context_used": context != "No relevant context found in knowledge base.",
                 "response_time": round(response_time, 3),
                 "tokens_used": cb.total_tokens if 'cb' in locals() else 0,
